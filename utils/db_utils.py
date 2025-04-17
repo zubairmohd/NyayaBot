@@ -7,8 +7,25 @@ from sqlalchemy.orm import sessionmaker, relationship
 # Get database URL from environment
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Add connection pool settings and SSL handling to make connection more resilient
+engine_args = {
+    "pool_recycle": 280,  # Recycle connections before they reach PostgreSQL's timeout
+    "pool_pre_ping": True,  # Verify connections before using them
+    "pool_size": 5,  # Adjust based on expected usage
+    "max_overflow": 10,
+    "pool_timeout": 30,  # Timeout waiting for a connection from the pool
+    "connect_args": {
+        "sslmode": "require",
+        "connect_timeout": 10,
+        "keepalives": 1,  # Enable keepalives
+        "keepalives_idle": 60,  # Seconds before sending a keepalive
+        "keepalives_interval": 10,  # Seconds between keepalives
+        "keepalives_count": 5  # Maximum fails before connection is considered dead
+    }
+}
+
 # Create SQLAlchemy engine and session
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, **engine_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -68,20 +85,68 @@ class Document(Base):
 
 def get_db():
     """
-    Get database session
+    Get database session with retry logic
     
     Returns:
         SQLAlchemy session
     """
-    db = SessionLocal()
-    try:
-        return db
-    finally:
-        db.close()
+    import time
+    from sqlalchemy.exc import OperationalError, ProgrammingError, DatabaseError
+    
+    max_retries = 3
+    retry_delay = 1  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            db = SessionLocal()
+            # Test the connection with a simple query
+            db.execute("SELECT 1")
+            return db
+        except (OperationalError, ProgrammingError, DatabaseError) as e:
+            if attempt < max_retries - 1:
+                print(f"Database connection error (attempt {attempt+1}/{max_retries}): {e}")
+                time.sleep(retry_delay)
+                # Increase delay for next retry (exponential backoff)
+                retry_delay *= 2
+            else:
+                print(f"Failed to connect to database after {max_retries} attempts")
+                # On final attempt, still return the session and let the caller handle any errors
+                db = SessionLocal()
+                return db
+        except Exception as e:
+            print(f"Unexpected database error: {e}")
+            db = SessionLocal()
+            return db
 
 def init_db():
     """Initialize database, creating tables if they don't exist"""
-    Base.metadata.create_all(bind=engine)
+    import time
+    from sqlalchemy.exc import OperationalError, ProgrammingError, DatabaseError
+    
+    max_retries = 3
+    retry_delay = 1  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("Database tables created successfully.")
+            return
+        except (OperationalError, ProgrammingError, DatabaseError) as e:
+            if attempt < max_retries - 1:
+                print(f"Database initialization error (attempt {attempt+1}/{max_retries}): {e}")
+                time.sleep(retry_delay)
+                # Increase delay for next retry (exponential backoff)
+                retry_delay *= 2
+            else:
+                print(f"Failed to initialize database after {max_retries} attempts: {e}")
+                # Don't raise here to allow app to start even if DB isn't available yet
+        except Exception as e:
+            print(f"Unexpected error during database initialization: {e}")
+            break
 
-# Initialize database on module import
-init_db()
+# Initialize database on module import - wrapped in try/except to avoid
+# app startup failures if database is temporarily unavailable
+try:
+    init_db()
+except Exception as e:
+    print(f"Database initialization deferred due to error: {e}")
