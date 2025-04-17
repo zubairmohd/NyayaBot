@@ -1,0 +1,359 @@
+import { useState, useRef, useEffect } from 'react';
+import { 
+  Box, 
+  TextField, 
+  Button, 
+  Typography, 
+  Paper, 
+  IconButton,
+  CircularProgress,
+  Divider,
+  useTheme,
+  Card,
+  Avatar,
+} from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
+import MicIcon from '@mui/icons-material/Mic';
+import StopIcon from '@mui/icons-material/Stop';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import axios from 'axios';
+
+// Sample messages for development
+const sampleMessages = [
+  { role: 'assistant', content: 'Hello! I am NyayaBot, your AI legal assistant. How can I help you today?' },
+];
+
+export default function ChatInterface() {
+  const [messages, setMessages] = useState(sampleMessages);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const messagesEndRef = useRef(null);
+  const theme = useTheme();
+  
+  // Mock audio recording functionality (to be replaced with actual implementation)
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  
+  // Scroll to bottom of messages
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+  
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSendMessage = async () => {
+    if (input.trim() === '') return;
+    
+    const userMessage = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+    
+    try {
+      // Here we would make an API call to our backend
+      // For now, we'll use a timeout to simulate a response
+      // Replace this with actual API call later
+      
+      // Mock API call
+      setTimeout(() => {
+        const botResponse = {
+          role: 'assistant',
+          content: 'This is a placeholder response. In the actual application, this would be a response from the backend API based on Indian Penal Code and other legal information.'
+        };
+        setMessages(prev => [...prev, botResponse]);
+        setIsLoading(false);
+      }, 2000);
+      
+      // Actual API call would look like this:
+      /*
+      const response = await axios.post('/api/chat', {
+        message: input
+      });
+      setMessages(prev => [...prev, { role: 'assistant', content: response.data.message }]);
+      */
+    } catch (error) {
+      console.error('Error getting response:', error);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'I apologize, but I encountered an error processing your request. Please try again.' 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Reset audio chunks
+      audioChunksRef.current = [];
+      
+      // Create media recorder
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      // Add audio chunks when data is available
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      // Handle recording stop
+      mediaRecorder.onstop = () => {
+        // Create blob from chunks
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        
+        // Create form data to send to server
+        const formData = new FormData();
+        formData.append('audio', audioBlob);
+        
+        // Show loading state
+        setIsLoading(true);
+        
+        // Send audio to server (mock for now)
+        console.log('Audio recorded, would send to server');
+        
+        // Mock transcription and response
+        setTimeout(() => {
+          const transcription = "This is a mock transcription of the recorded audio.";
+          setMessages(prev => [
+            ...prev, 
+            { role: 'user', content: transcription },
+            { role: 'assistant', content: 'I received your audio message. This is a placeholder response.' }
+          ]);
+          setIsLoading(false);
+        }, 2000);
+        
+        // Actual implementation would send to server:
+        /*
+        axios.post('/api/transcribe', formData)
+          .then(response => {
+            const transcription = response.data.transcription;
+            setMessages(prev => [...prev, { role: 'user', content: transcription }]);
+            
+            // Then get AI response
+            return axios.post('/api/chat', { message: transcription });
+          })
+          .then(response => {
+            setMessages(prev => [...prev, { role: 'assistant', content: response.data.message }]);
+          })
+          .catch(error => {
+            console.error('Error processing audio:', error);
+            setMessages(prev => [...prev, { 
+              role: 'assistant', 
+              content: 'I apologize, but I encountered an error processing your audio. Please try typing your question instead.' 
+            }]);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+        */
+      };
+      
+      // Start recording
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Unable to access microphone. Please check your browser permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      // Stop all audio tracks
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const playAudio = (message) => {
+    // Mock implementation - would actually play audio of the bot's response
+    const utterance = new SpeechSynthesisUtterance(message.content);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '70vh', maxHeight: '800px' }}>
+      {/* Chat header */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 2, 
+          borderTopLeftRadius: 8, 
+          borderTopRightRadius: 8,
+          backgroundColor: theme.palette.primary.main,
+          color: 'white'
+        }}
+      >
+        <Typography variant="h6">NyayaBot Chat</Typography>
+        <Typography variant="body2">
+          Ask me any legal question related to Indian law
+        </Typography>
+      </Paper>
+      
+      {/* Messages container */}
+      <Box 
+        sx={{ 
+          flexGrow: 1, 
+          overflowY: 'auto', 
+          p: 2,
+          backgroundColor: '#f5f7fb',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2
+        }}
+      >
+        {messages.map((message, index) => (
+          <Box 
+            key={index}
+            sx={{
+              display: 'flex',
+              justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+              mb: 2
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                maxWidth: '80%'
+              }}
+            >
+              {message.role === 'assistant' && (
+                <Avatar 
+                  sx={{ 
+                    bgcolor: theme.palette.primary.main,
+                    mr: 1,
+                    height: 40,
+                    width: 40
+                  }}
+                >
+                  N
+                </Avatar>
+              )}
+              
+              <Card
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  ...(message.role === 'user' 
+                    ? { 
+                        bgcolor: theme.palette.primary.main, 
+                        color: 'white',
+                        borderTopRightRadius: 0
+                      } 
+                    : { 
+                        bgcolor: 'white',
+                        borderTopLeftRadius: 0
+                      }
+                  )
+                }}
+              >
+                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {message.content}
+                </Typography>
+                
+                {message.role === 'assistant' && (
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => playAudio(message)}
+                      sx={{ color: theme.palette.primary.main }}
+                    >
+                      <PlayArrowIcon />
+                    </IconButton>
+                  </Box>
+                )}
+              </Card>
+              
+              {message.role === 'user' && (
+                <Avatar 
+                  sx={{ 
+                    bgcolor: theme.palette.secondary.main,
+                    ml: 1,
+                    height: 40,
+                    width: 40
+                  }}
+                >
+                  Y
+                </Avatar>
+              )}
+            </Box>
+          </Box>
+        ))}
+        
+        {isLoading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
+        )}
+        
+        <div ref={messagesEndRef} />
+      </Box>
+      
+      {/* Input area */}
+      <Paper 
+        elevation={2} 
+        sx={{ 
+          p: 2, 
+          borderBottomLeftRadius: 8, 
+          borderBottomRightRadius: 8
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <IconButton 
+            color={isRecording ? 'error' : 'primary'} 
+            onClick={isRecording ? stopRecording : startRecording}
+            sx={{ mr: 1 }}
+          >
+            {isRecording ? <StopIcon /> : <MicIcon />}
+          </IconButton>
+          
+          <TextField
+            fullWidth
+            placeholder="Type your legal question here..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            multiline
+            maxRows={3}
+            variant="outlined"
+            disabled={isLoading || isRecording}
+            sx={{ mr: 1 }}
+          />
+          
+          <Button
+            variant="contained"
+            color="primary"
+            endIcon={<SendIcon />}
+            onClick={handleSendMessage}
+            disabled={isLoading || isRecording || input.trim() === ''}
+          >
+            Send
+          </Button>
+        </Box>
+        
+        {isRecording && (
+          <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', color: 'error.main' }}>
+            <CircularProgress size={16} color="error" sx={{ mr: 1 }} />
+            <Typography variant="caption">Recording... (Click stop icon when finished)</Typography>
+          </Box>
+        )}
+      </Paper>
+    </Box>
+  );
+}
