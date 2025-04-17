@@ -3,20 +3,36 @@ Utility to process uploaded documents and add them to the RAG system
 """
 import sys
 import os
-import PyPDF2
 from typing import List, Optional
 
-from langchain.schema.document import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings.openai import OpenAIEmbeddings
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# Try to import required packages, but provide fallbacks if they're not available
+try:
+    import PyPDF2
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+    print("Warning: PyPDF2 package not available. PDF processing will be limited.", file=sys.stderr)
+
+try:
+    from langchain.schema.document import Document
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    from langchain_community.vectorstores import FAISS
+    from langchain_community.embeddings.openai import OpenAIEmbeddings
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
+    print("Warning: LangChain packages not available. RAG capabilities will be limited.", file=sys.stderr)
 
 # Initialize embeddings based on available API keys
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 def get_embeddings():
     """Get the appropriate embeddings model based on available API keys"""
+    # Check if LangChain is available first
+    if not 'LANGCHAIN_AVAILABLE' in globals() or not LANGCHAIN_AVAILABLE:
+        return None
+        
     if OPENAI_API_KEY:
         # Use OpenAI embeddings if API key is available
         return OpenAIEmbeddings()

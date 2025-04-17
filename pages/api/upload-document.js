@@ -1,133 +1,148 @@
-import formidable from 'formidable';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
+import formidable from 'formidable';
 import { spawn } from 'child_process';
 
-// Disable the default body parser so we can handle the form data manually
+// Configure formidable to parse form data
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-// Main handler function for document uploads
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed, use POST' });
   }
-
+  
   try {
-    // Parse the form data using formidable
+    // Parse the incoming form data
     const { fields, files } = await parseForm(req);
     
-    // Process uploaded document
-    const documentInfo = await processUploadedDocument(files.document);
+    if (!files.document) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No document file uploaded' 
+      });
+    }
     
-    // Return success response with info about the document
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Document uploaded successfully',
-      document: documentInfo
+    const file = files.document;
+    
+    // Process the uploaded document
+    const { success, filePath, error } = await processUploadedDocument(file);
+    
+    if (!success) {
+      return res.status(500).json({ 
+        success: false, 
+        error: error || 'Failed to process document' 
+      });
+    }
+    
+    // Return success response
+    return res.status(200).json({
+      success: true,
+      document: {
+        originalName: file.originalFilename,
+        name: path.basename(filePath),
+        size: file.size,
+        path: filePath
+      }
     });
   } catch (error) {
-    console.error('Error uploading document:', error);
+    console.error('Error handling document upload:', error);
     return res.status(500).json({ 
-      error: 'Failed to upload document',
-      details: error.message
+      success: false, 
+      error: error.message || 'Internal server error' 
     });
   }
 }
 
-// Parse form data using formidable
 function parseForm(req) {
   return new Promise((resolve, reject) => {
     const form = new formidable.IncomingForm({
       keepExtensions: true,
-      maxFileSize: 10 * 1024 * 1024, // 10MB file size limit
+      maxFileSize: 10 * 1024 * 1024, // 10MB limit
     });
-
+    
     form.parse(req, (err, fields, files) => {
       if (err) {
-        return reject(err);
+        reject(err);
+        return;
       }
       resolve({ fields, files });
     });
   });
 }
 
-// Process the uploaded document and store it properly
 async function processUploadedDocument(file) {
-  // Check if file was uploaded
-  if (!file || !file.filepath) {
-    throw new Error('No document uploaded');
+  try {
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    await fs.mkdir(uploadsDir, { recursive: true });
+    
+    // Generate a unique filename
+    const timestamp = new Date().getTime();
+    const filename = `${timestamp}-${file.originalFilename}`;
+    const filePath = path.join(uploadsDir, filename);
+    
+    // Copy file to uploads directory
+    const data = await fs.readFile(file.filepath);
+    await fs.writeFile(filePath, data);
+    
+    // Add document to RAG system
+    const ragSuccess = await addDocumentToRAG(filePath);
+    
+    if (!ragSuccess) {
+      console.warn(`Warning: Failed to add document to RAG system: ${filePath}`);
+      // Still return success even if RAG processing fails
+      // This allows the upload to succeed but with a warning
+    }
+    
+    return {
+      success: true,
+      filePath: filePath
+    };
+  } catch (error) {
+    console.error('Error processing document:', error);
+    return {
+      success: false,
+      error: error.message
+    };
   }
-
-  // Check file type (only accept PDFs)
-  const fileType = path.extname(file.originalFilename).toLowerCase();
-  if (fileType !== '.pdf') {
-    throw new Error('Only PDF files are supported');
-  }
-
-  // Create uploads directory if it doesn't exist
-  const uploadsDir = path.join(process.cwd(), 'uploads');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-
-  // Generate a unique filename
-  const timestamp = Date.now();
-  const filename = `document_${timestamp}${fileType}`;
-  const filePath = path.join(uploadsDir, filename);
-
-  // Read the uploaded file and write it to the uploads directory
-  const data = fs.readFileSync(file.filepath);
-  fs.writeFileSync(filePath, data);
-  
-  // Remove the temporary file created by formidable
-  fs.unlinkSync(file.filepath);
-
-  // Run Python script to process the document and add it to RAG
-  await addDocumentToRAG(filePath);
-
-  // Return information about the uploaded document
-  return {
-    filename,
-    originalName: file.originalFilename,
-    size: file.size,
-    path: `/uploads/${filename}`,
-    type: fileType
-  };
 }
 
-// Process the document with Python and add it to RAG
 async function addDocumentToRAG(filePath) {
-  return new Promise((resolve, reject) => {
-    // This would typically call a Python script that integrates with our RAG system
-    // For now, we'll just resolve immediately since we're not implementing this yet
-    resolve();
-    
-    // In a real implementation, we would do something like:
-    /*
-    const pythonProcess = spawn('python', [
-      path.join(process.cwd(), 'utils/process_document.py'),
-      filePath
-    ]);
-    
-    pythonProcess.stdout.on('data', (data) => {
-      console.log(`Python stdout: ${data}`);
-    });
-    
-    pythonProcess.stderr.on('data', (data) => {
-      console.error(`Python stderr: ${data}`);
-    });
-    
-    pythonProcess.on('close', (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`Python process exited with code ${code}`));
-      }
-    });
-    */
+  return new Promise((resolve) => {
+    try {
+      // Spawn a Python process to process the document
+      const pythonProcess = spawn('python', [
+        path.join(process.cwd(), 'utils/process_document.py'),
+        filePath
+      ]);
+      
+      // Log output
+      pythonProcess.stdout.on('data', (data) => {
+        console.log(`Process output: ${data}`);
+      });
+      
+      // Log errors
+      pythonProcess.stderr.on('data', (data) => {
+        console.error(`Process error: ${data}`);
+      });
+      
+      // Handle process completion
+      pythonProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log(`Successfully processed document: ${filePath}`);
+          resolve(true);
+        } else {
+          console.warn(`Document processing exited with code ${code}: ${filePath}`);
+          resolve(false);
+        }
+      });
+    } catch (error) {
+      console.error('Error spawning Python process:', error);
+      resolve(false);
+    }
   });
 }
