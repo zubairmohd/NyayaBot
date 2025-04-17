@@ -1,7 +1,7 @@
-import axios from 'axios';
 import formidable from 'formidable';
 import fs from 'fs';
 import path from 'path';
+import { transcribeAudio } from './llm-utils';
 
 // Configure Next.js to handle file uploads
 export const config = {
@@ -44,26 +44,20 @@ export default async function handler(req, res) {
       const audioFile = files.audio;
       const audioPath = audioFile.filepath;
 
-      // Create FormData to send the file to our backend
-      const formData = new FormData();
-      formData.append('audio', fs.createReadStream(audioPath));
+      // Read the audio file
+      const audioBuffer = fs.readFileSync(audioPath);
       
       // Language code if provided in the form fields
       const languageCode = fields.language_code || 'en';
-      formData.append('language_code', languageCode);
 
-      // Send to our Streamlit backend
-      const response = await axios.post('http://localhost:5000/api/transcribe_audio', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // Call our OpenAI-based transcription directly
+      const transcriptionText = await transcribeAudio(audioBuffer);
 
       // Clean up the temporary file
       fs.unlinkSync(audioPath);
 
       res.status(200).json({ 
-        transcription: response.data.transcription 
+        transcription: transcriptionText 
       });
     } catch (error) {
       console.error('Error transcribing audio:', error);

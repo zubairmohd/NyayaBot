@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { generateLegalResponse } from './llm-utils';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,13 +14,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Connect to our Streamlit backend running on port 5000
-    const response = await axios.post('http://localhost:5000/api/get_legal_response', {
-      query: message,
-      language_code: language
-    });
+    // Use our OpenAI-based implementation directly
+    const legalResponse = await generateLegalResponse(message, language);
     
-    res.status(200).json({ message: response.data.response });
+    res.status(200).json({ message: legalResponse });
   } catch (error) {
     console.error('Error in chat API:', error);
     res.status(500).json({ 

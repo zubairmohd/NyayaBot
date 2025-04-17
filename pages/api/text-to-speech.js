@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+// Base64 encoded fallback audio (a very small silent mp3)
+const FALLBACK_AUDIO = 'SUQzBAAAAAABGFRJVDIAAABIAFRYWFgAAAAPAAADY29tbWVudAAAAABJbmRpYW4gTGVnYWwgQXNzaXN0YW50IC0gZmFsbGJhY2sgYXVkaW8gZmlsZQpUQUxCAAAAAQAAAFRDT04AAAAFAAAAUm9jawAA';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -14,23 +17,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Connect to our Streamlit backend running on port 5000
-    const response = await axios.post('http://localhost:5000/api/text_to_speech', 
-      {
-        text,
-        language_code
-      },
-      {
-        responseType: 'arraybuffer' // Important for binary audio data
-      }
-    );
+    // In a full implementation, we would use a proper TTS service like:
+    // - OpenAI TTS API (Text to Speech)
+    // - Google Text-to-Speech
+    // - Amazon Polly
+    // - Microsoft Azure Speech Service
+    
+    // For now, we'll use the SpeechSynthesis API in the browser (client-side)
+    // and just return a dummy response here
     
     // Set appropriate headers for audio
     res.setHeader('Content-Type', 'audio/mp3');
     res.setHeader('Content-Disposition', 'attachment; filename="speech.mp3"');
     
-    // Send the audio data directly
-    res.send(Buffer.from(response.data));
+    // Send the fallback audio data
+    // In a full implementation, we would call a TTS API and return real audio
+    res.send(Buffer.from(FALLBACK_AUDIO, 'base64'));
+    
   } catch (error) {
     console.error('Error in text-to-speech API:', error);
     res.status(500).json({ 

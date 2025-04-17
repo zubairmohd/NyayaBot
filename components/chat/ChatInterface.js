@@ -53,27 +53,21 @@ export default function ChatInterface() {
     setIsLoading(true);
     
     try {
-      // Here we would make an API call to our backend
-      // For now, we'll use a timeout to simulate a response
-      // Replace this with actual API call later
+      // Make a real API call to our backend
+      const response = await axios.post('/api/chat', {
+        message: input,
+        language: 'en' // This will be dynamic based on selected language
+      });
       
-      // Mock API call
-      setTimeout(() => {
+      if (response.data && response.data.message) {
         const botResponse = {
           role: 'assistant',
-          content: 'This is a placeholder response. In the actual application, this would be a response from the backend API based on Indian Penal Code and other legal information.'
+          content: response.data.message
         };
         setMessages(prev => [...prev, botResponse]);
-        setIsLoading(false);
-      }, 2000);
-      
-      // Actual API call would look like this:
-      /*
-      const response = await axios.post('/api/chat', {
-        message: input
-      });
-      setMessages(prev => [...prev, { role: 'assistant', content: response.data.message }]);
-      */
+      } else {
+        throw new Error('Invalid response format from API');
+      }
     } catch (error) {
       console.error('Error getting response:', error);
       setMessages(prev => [...prev, { 
@@ -122,29 +116,17 @@ export default function ChatInterface() {
         // Show loading state
         setIsLoading(true);
         
-        // Send audio to server (mock for now)
-        console.log('Audio recorded, would send to server');
-        
-        // Mock transcription and response
-        setTimeout(() => {
-          const transcription = "This is a mock transcription of the recorded audio.";
-          setMessages(prev => [
-            ...prev, 
-            { role: 'user', content: transcription },
-            { role: 'assistant', content: 'I received your audio message. This is a placeholder response.' }
-          ]);
-          setIsLoading(false);
-        }, 2000);
-        
-        // Actual implementation would send to server:
-        /*
+        // Send audio to server for transcription and response
         axios.post('/api/transcribe', formData)
           .then(response => {
             const transcription = response.data.transcription;
             setMessages(prev => [...prev, { role: 'user', content: transcription }]);
             
             // Then get AI response
-            return axios.post('/api/chat', { message: transcription });
+            return axios.post('/api/chat', { 
+              message: transcription,
+              language: 'en' // This will be dynamic based on selected language
+            });
           })
           .then(response => {
             setMessages(prev => [...prev, { role: 'assistant', content: response.data.message }]);
@@ -159,7 +141,6 @@ export default function ChatInterface() {
           .finally(() => {
             setIsLoading(false);
           });
-        */
       };
       
       // Start recording
@@ -182,9 +163,27 @@ export default function ChatInterface() {
   };
 
   const playAudio = (message) => {
-    // Mock implementation - would actually play audio of the bot's response
-    const utterance = new SpeechSynthesisUtterance(message.content);
-    window.speechSynthesis.speak(utterance);
+    // Use the browser's SpeechSynthesis API
+    if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      // Create a new utterance
+      const utterance = new SpeechSynthesisUtterance(message.content);
+      
+      // Set language - in a full implementation this would be dynamic
+      utterance.lang = 'en-IN'; // Indian English
+      
+      // Optional: Configure voice properties
+      utterance.rate = 0.9; // Slightly slower
+      utterance.pitch = 1;
+      
+      // Speak the text
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.error('Speech synthesis not supported by this browser');
+      alert('Text-to-speech is not supported by your browser.');
+    }
   };
 
   return (
