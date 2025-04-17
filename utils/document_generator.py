@@ -248,4 +248,27 @@ def generate_document(doc_type: str, conversation_text: str, user_id: int = None
     
     # Get the PDF content
     buffer.seek(0)
-    return buffer.getvalue()
+    pdf_content = buffer.getvalue()
+    
+    # Save to database if user_id is provided
+    if user_id:
+        try:
+            db = next(get_db())
+            # Convert the filled template to text format for database storage
+            text_content = "\n".join([
+                template["title"],
+                "\n".join([section for section in template["sections"]])
+            ])
+            
+            document = Document(
+                user_id=user_id,
+                doc_type=doc_type,
+                content=text_content
+            )
+            
+            db.add(document)
+            db.commit()
+        except Exception as e:
+            print(f"Error saving document to database: {e}")
+    
+    return pdf_content

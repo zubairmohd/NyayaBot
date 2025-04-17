@@ -4,11 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
-    "google-cloud-translate>=3.20.2",
-    "googletrans==4.0.0rc1",
+    "google-cloud-translate>=2.0.0",
     "langchain>=0.2.16",
     "langdetect>=1.0.9",
-    "openai>=0.28.1",
+    "openai>=1.0.0",
     "psycopg2-binary>=2.9.10",
     "pydub>=0.25.1",
     "pypdf2>=3.0.1",

@@ -2,7 +2,7 @@ import os
 import requests
 from langdetect import detect
 from google.cloud import translate_v2 as translate
-from googletrans import Translator  # Fallback translator
+from openai import OpenAI
 
 # Define supported languages with their codes
 supported_languages = {
@@ -26,8 +26,8 @@ try:
     # Try to use Google Cloud Translation if credentials are available
     google_translate_client = translate.Client()
 except Exception:
-    # Fallback to googletrans library
-    fallback_translator = Translator()
+    # We'll use OpenAI as fallback - no initialization needed here
+    google_translate_client = None
 
 def detect_language(text):
     """
@@ -83,18 +83,31 @@ def translate_text(text, target_language):
             
         # Try using Google Cloud Translation
         try:
-            response = google_translate_client.translate(
-                text,
-                target_language=target_language
-            )
-            return response['translatedText']
+            if google_translate_client:
+                response = google_translate_client.translate(
+                    text,
+                    target_language=target_language
+                )
+                return response['translatedText']
+            else:
+                # Fallback to OpenAI for translation
+                raise Exception("Google Translation not available")
         except Exception:
-            # Fallback to googletrans
-            translation = fallback_translator.translate(
-                text, 
-                dest=target_language
+            # Fallback to OpenAI
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            language_name = next((name for name, code in supported_languages.items() if code == target_language), target_language)
+            
+            prompt = f"Translate the following text to {language_name}. Response should only contain the translated text, nothing else:\n\n{text}"
+            
+            response = client.chat.completions.create(
+                model="gpt-4o",  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024, do not change this unless explicitly requested by the user
+                messages=[
+                    {"role": "system", "content": f"You are a professional translator. Translate text to {language_name} accurately."},
+                    {"role": "user", "content": prompt}
+                ]
             )
-            return translation.text
+            
+            return response.choices[0].message.content
             
     except Exception as e:
         print(f"Error translating text: {e}")
