@@ -257,40 +257,33 @@ export default function ChatInterface() {
           </Box>
           
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: '200px' }}>
-            {/* AI Model Selector */}
-            <FormControl 
-              variant="outlined"
-              sx={{ 
-                width: '100%', 
-                backgroundColor: 'white', 
-                borderRadius: 1,
-                "& .MuiInputLabel-root": {
-                  backgroundColor: "white",
-                  paddingLeft: "4px",
-                  paddingRight: "4px",
-                }
-              }} 
-              size="small"
-            >
-              <InputLabel 
-                id="model-select-label" 
-                shrink={true}
+            {/* AI Model Selector - with simpler styling */}
+            <Box sx={{ mb: 1 }}>
+              <Typography 
+                variant="subtitle2" 
                 sx={{ 
-                  position: "absolute", 
-                  top: "-6px", 
-                  backgroundColor: "white", 
-                  padding: "0 4px" 
+                  color: 'white', 
+                  mb: 0.5, 
+                  fontWeight: 'medium',
+                  textShadow: '0px 0px 2px rgba(0,0,0,0.3)'
                 }}
               >
                 AI Model
-              </InputLabel>
+              </Typography>
               <Select
-                labelId="model-select-label"
                 id="model-select"
                 value={selectedModel}
-                label="AI Model"
                 onChange={(e) => setSelectedModel(e.target.value)}
-                sx={{ "& .MuiSelect-select": { paddingTop: 1.5, paddingBottom: 1.5 } }}
+                fullWidth
+                size="small"
+                sx={{ 
+                  backgroundColor: 'white',
+                  borderRadius: 1,
+                  "& .MuiSelect-select": { 
+                    paddingTop: 1.5, 
+                    paddingBottom: 1.5 
+                  } 
+                }}
               >
                 <MenuItem value="openai/gpt-4o">OpenAI GPT-4o</MenuItem>
                 <MenuItem value="openai/gpt-3.5-turbo">OpenAI GPT-3.5</MenuItem>
@@ -299,43 +292,35 @@ export default function ChatInterface() {
                 <MenuItem value="huggingface/llama-3-8b">Llama 3 (8B)</MenuItem>
                 <MenuItem value="huggingface/llama-3-70b">Llama 3 (70B)</MenuItem>
               </Select>
-            </FormControl>
+            </Box>
             
-            {/* Language Selector */}
-            <FormControl 
-              variant="outlined"
-              sx={{ 
-                width: '100%', 
-                backgroundColor: 'white', 
-                borderRadius: 1,
-                marginTop: 1,
-                "& .MuiInputLabel-root": {
-                  backgroundColor: "white",
-                  paddingLeft: "4px",
-                  paddingRight: "4px",
-                }
-              }} 
-              size="small"
-            >
-              <InputLabel 
-                id="language-select-label" 
-                shrink={true}
+            {/* Language Selector - with simpler styling */}
+            <Box>
+              <Typography 
+                variant="subtitle2" 
                 sx={{ 
-                  position: "absolute", 
-                  top: "-6px", 
-                  backgroundColor: "white", 
-                  padding: "0 4px" 
+                  color: 'white', 
+                  mb: 0.5, 
+                  fontWeight: 'medium',
+                  textShadow: '0px 0px 2px rgba(0,0,0,0.3)'
                 }}
               >
                 Language
-              </InputLabel>
+              </Typography>
               <Select
-                labelId="language-select-label"
                 id="language-select"
                 value={selectedLanguage}
-                label="Language"
                 onChange={(e) => setSelectedLanguage(e.target.value)}
-                sx={{ "& .MuiSelect-select": { paddingTop: 1.5, paddingBottom: 1.5 } }}
+                fullWidth
+                size="small"
+                sx={{ 
+                  backgroundColor: 'white',
+                  borderRadius: 1,
+                  "& .MuiSelect-select": { 
+                    paddingTop: 1.5, 
+                    paddingBottom: 1.5 
+                  } 
+                }}
               >
                 {languages.map((lang) => (
                   <MenuItem key={lang.code} value={lang.code}>
@@ -343,7 +328,7 @@ export default function ChatInterface() {
                   </MenuItem>
                 ))}
               </Select>
-            </FormControl>
+            </Box>
           </Box>
         </Box>
       </Paper>
