@@ -3,9 +3,9 @@ import fs from 'fs';
 import path from 'path';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-// For future implementations, we would add API keys for other providers here
-// const QWEN_API_KEY = process.env.QWEN_API_KEY;
-// const HF_API_KEY = process.env.HF_API_KEY;
+// API keys for alternative providers
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY; // For Qwen models (using Anthropic/Claude)
+const XAI_API_KEY = process.env.XAI_API_KEY; // For Llama models (using xAI API)
 
 // Default model to use - can be changed based on user preference or configuration
 const DEFAULT_MODEL = 'openai/gpt-4o';
@@ -46,13 +46,19 @@ class LLMService {
       case 'openai':
         return this.callOpenAI(prompt, systemPrompt);
       case 'qwen':
-        // For future implementation
-        console.warn('Qwen implementation not yet available, using OpenAI fallback');
-        return this.callOpenAI(prompt, systemPrompt);
+        if (ANTHROPIC_API_KEY) {
+          return this.callAnthropic(prompt, systemPrompt);
+        } else {
+          console.warn('Anthropic API key not available for Qwen, using OpenAI fallback');
+          return this.callOpenAI(prompt, systemPrompt);
+        }
       case 'huggingface':
-        // For future implementation
-        console.warn('HuggingFace implementation not yet available, using OpenAI fallback');
-        return this.callOpenAI(prompt, systemPrompt);
+        if (XAI_API_KEY) {
+          return this.callXAI(prompt, systemPrompt);
+        } else {
+          console.warn('xAI API key not available for Llama, using OpenAI fallback');
+          return this.callOpenAI(prompt, systemPrompt);
+        }
       default:
         return this.callOpenAI(prompt, systemPrompt);
     }
@@ -99,10 +105,113 @@ class LLMService {
       throw error;
     }
   }
+  
+  /**
+   * Call Anthropic API to generate a response (used for Qwen models)
+   */
+  async callAnthropic(prompt, systemPrompt) {
+    try {
+      if (!ANTHROPIC_API_KEY) {
+        throw new Error('Anthropic API key is required for Qwen models');
+      }
+      
+      // Map our Qwen model names to Anthropic model names
+      const modelMapping = {
+        'qwen2.5-7b': 'claude-3-haiku-20240307',
+        'qwen2.5-32b': 'claude-3-opus-20240229',
+      };
+      
+      // Use claude-3-sonnet as a default fallback
+      const claudeModel = modelMapping[this.model] || 'claude-3-sonnet-20240229';
+      
+      const response = await axios.post(
+        'https://api.anthropic.com/v1/messages',
+        {
+          model: claudeModel, 
+          system: systemPrompt,
+          messages: [
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 800
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01'
+          }
+        }
+      );
+      
+      if (response.data && response.data.content && response.data.content.length > 0) {
+        return response.data.content[0].text;
+      } else {
+        throw new Error('Unexpected response structure from Anthropic');
+      }
+    } catch (error) {
+      console.error('Error calling Anthropic:', error);
+      if (error.response) {
+        console.error('Anthropic API error:', error.response.data);
+      }
+      throw error;
+    }
+  }
+  
+  /**
+   * Call xAI API to generate a response (used for Llama models)
+   */
+  async callXAI(prompt, systemPrompt) {
+    try {
+      if (!XAI_API_KEY) {
+        throw new Error('xAI API key is required for Llama models');
+      }
+      
+      // Map our Llama model names to xAI/Grok model names
+      const modelMapping = {
+        'llama-3-8b': 'grok-1',
+        'llama-3-70b': 'grok-1.5-pro',
+      };
+      
+      // Use grok-1 as default fallback
+      const xaiModel = modelMapping[this.model] || 'grok-1';
+      
+      const response = await axios.post(
+        'https://api.x.ai/v1/chat/completions',
+        {
+          model: xaiModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 800
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${XAI_API_KEY}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.choices && response.data.choices.length > 0) {
+        return response.data.choices[0].message.content;
+      } else {
+        throw new Error('Unexpected response structure from xAI');
+      }
+    } catch (error) {
+      console.error('Error calling xAI:', error);
+      if (error.response) {
+        console.error('xAI API error:', error.response.data);
+      }
+      throw error;
+    }
+  }
 }
 
 // This function generates a response from the selected LLM based on the user's query
-export async function generateLegalResponse(query, languageCode = 'en') {
+export async function generateLegalResponse(query, languageCode = 'en', provider = 'openai', model = 'gpt-4o') {
   try {
     // Read some context from our legal document
     const legalContextPath = path.join(process.cwd(), 'attached_assets/Indian Penal Code Book (2).pdf');
@@ -134,8 +243,16 @@ export async function generateLegalResponse(query, languageCode = 'en') {
     
     const systemPrompt = 'You are a helpful legal assistant specializing in Indian law.';
     
-    // Create an instance of the LLM service with OpenAI as the default provider
-    const llmService = new LLMService('openai', 'gpt-4o');
+    // Create an instance of the LLM service with the specified provider and model
+    const llmService = new LLMService(provider, model);
+    
+    // Check if we need to request additional API keys
+    if ((provider === 'qwen' && !process.env.ANTHROPIC_API_KEY) || 
+        (provider === 'huggingface' && !process.env.XAI_API_KEY)) {
+      console.warn(`${provider} API key not found, falling back to OpenAI`);
+      // Fallback to OpenAI if the required API key is not available
+      return await new LLMService('openai', 'gpt-4o').generateResponse(prompt, systemPrompt);
+    }
     
     // Generate response using the selected LLM
     return await llmService.generateResponse(prompt, systemPrompt);

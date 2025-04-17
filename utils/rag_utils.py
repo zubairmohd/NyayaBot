@@ -9,6 +9,7 @@ import PyPDF2
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings.openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.schema.document import Document
 
 # Path to legal documents
@@ -18,8 +19,23 @@ IPC_PDF_FILES = [
     os.path.join(LEGAL_DOCS_PATH, "THE-INDIAN-PENAL-CODE-1860.pdf"),
 ]
 
-# Initialize OpenAI embeddings
-embeddings = OpenAIEmbeddings()
+# Detect if OpenAI API key is available, otherwise use HuggingFace embeddings
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Initialize embeddings based on available API keys
+if OPENAI_API_KEY:
+    # Use OpenAI embeddings if API key is available
+    embeddings = OpenAIEmbeddings()
+    print("Using OpenAI embeddings for RAG")
+else:
+    # Fall back to local HuggingFace embeddings (no API key needed)
+    # Using a small, efficient model suitable for embedding
+    embeddings = HuggingFaceEmbeddings(
+        model_name="all-MiniLM-L6-v2",
+        model_kwargs={'device': 'cpu'},
+        encode_kwargs={'normalize_embeddings': True}
+    )
+    print("Using HuggingFace embeddings for RAG (all-MiniLM-L6-v2)")
 
 # Vector store for our documents
 vector_store = None
