@@ -1,0 +1,82 @@
+🇮🇳 App Name (Working Title): NyayaBot – Your Free AI Lawyer
+💡 Vision
+To provide instant, free, voice-based legal aid to every Indian—rich or poor, literate or illiterate—through an AI lawyer that speaks and understands in local languages.
+
+🧠 Core Features
+1. Voice Input (Speech-to-Text)
+Users can speak naturally in Hindi, Hinglish, or English.
+
+Uses Whisper or Vakyansh to convert voice to text.
+
+Ideal for people who can’t read/type.
+
+2. Legal Reasoning Engine (LLM - Qwen 2.5 7B)
+Trained on Indian Constitution, IPC, CrPC, case laws, FIRs, petitions, contracts, etc.
+
+Gives advice, drafts documents, explains sections, simulates legal arguments.
+
+Understands both direct questions and case descriptions.
+
+3. Voice Output (Text-to-Speech)
+Replies in spoken voice using Coqui or Bark (Indian accent).
+
+Explains legal points in layman terms and regional languages.
+
+4. Multi-Language Support
+Supports Hindi, English, and regional languages like Marathi, Tamil, Bengali, etc.
+
+Hinglish mixing (e.g., “Mujhe bail chahiye under Section 437 CrPC”) is handled well.
+
+5. Legal Draft Generator
+Instantly generates:
+
+Bail applications
+
+FIR explanations
+
+PIL drafts
+
+Affidavits and notices
+
+Offers editable legal templates in PDF format.
+
+6. Smart Legal Memory
+Remembers past queries for continuous help (via LangChain or local memory).
+
+Simulates an ongoing conversation with a real lawyer.
+
+📱 User Interface
+Mobile App (for smartphone users)
+
+IVR phone call system (for feature phone users)
+
+Kiosk deployment in villages or court premises
+
+Web version with Streamlit or Gradio frontend
+
+🛠️ Backend Stack
+
+Layer	Tool / Framework
+LLM Core	Qwen 2.5 7B (Unsloth, fine-tuned on Indian law)
+STT (Voice Input)	Whisper / Vakyansh
+TTS (Voice Output)	Coqui TTS / Bark AI
+Memory / Context	LangChain or ChromaDB
+Deployment	Streamlit, Android app, IVR, or Raspberry Pi
+🫱🏽‍🫲🏾 Target Users
+Villagers, farmers, daily wage workers
+
+Women facing domestic issues
+
+Tenants, workers, small business owners
+
+People needing bail help, FIR info, or court aid
+
+🔐 Ethical AI Goals
+No ads, no exploitation
+
+Privacy-first design
+
+Bias-checked and ethically fine-tuned
+
+Optional link to real human legal aid if needed
+
