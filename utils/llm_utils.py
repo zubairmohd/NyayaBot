@@ -7,10 +7,14 @@ from langchain.llms.base import LLM
 from typing import Any, List, Mapping, Optional
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 import time
+from openai import OpenAI
 
 # Initialize API key from environment variable
 QWEN_API_KEY = os.getenv("QWEN_API_KEY", "your_qwen_api_key")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your_openai_api_key")  # Fallback option
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Initialize OpenAI client
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 class QwenLLM(LLM):
     """
@@ -88,14 +92,17 @@ class QwenLLM(LLM):
             str: The response from the API
         """
         try:
-            import openai
-            openai.api_key = OPENAI_API_KEY
+            # Make API request to OpenAI using new client format
+            messages = [
+                {"role": "system", "content": "You are a helpful Indian legal assistant providing advice based on Indian law."}, 
+                {"role": "user", "content": prompt}
+            ]
             
-            # Make API request to OpenAI
-            completion = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "system", "content": "You are a helpful Indian legal assistant providing advice based on Indian law."}, 
-                         {"role": "user", "content": prompt}],
+            # the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
+            # do not change this unless explicitly requested by the user
+            completion = openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
                 max_tokens=1000,
                 temperature=0.7,
                 top_p=0.9,

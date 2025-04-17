@@ -9,7 +9,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from utils.llm_utils import QwenLLM
+from utils.llm_utils import QwenLLM, openai_client
+from utils.db_utils import Document, get_db
 from typing import Dict, Optional
 
 # Document templates for different document types
@@ -136,13 +137,14 @@ DOCUMENT_TEMPLATES = {
     }
 }
 
-def generate_document(doc_type: str, conversation_text: str) -> bytes:
+def generate_document(doc_type: str, conversation_text: str, user_id: int = None) -> bytes:
     """
     Generate a legal document based on the type and conversation context
     
     Args:
         doc_type (str): Type of document to generate
         conversation_text (str): Conversation context for document generation
+        user_id (int, optional): User ID to associate the document with
         
     Returns:
         bytes: PDF document content

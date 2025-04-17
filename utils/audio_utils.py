@@ -2,22 +2,18 @@ import os
 import tempfile
 import requests
 from io import BytesIO
-import openai
 import numpy as np
 import soundfile as sf
 from TTS.api import TTS
-import whisper
 from pydub import AudioSegment
+from openai import OpenAI
 
-# Initialize OpenAI API key from environment variable
-openai.api_key = os.getenv("OPENAI_API_KEY", "your_openai_api_key")
-
-# Initialize Whisper model
-whisper_model = whisper.load_model("base")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def transcribe_audio(audio_file_path):
     """
-    Transcribe audio using either Whisper API or local Whisper model
+    Transcribe audio using OpenAI's Whisper API
     
     Args:
         audio_file_path (str): Path to the audio file
@@ -26,20 +22,16 @@ def transcribe_audio(audio_file_path):
         str: Transcribed text
     """
     try:
-        # Try using OpenAI Whisper API first if key is available
-        if openai.api_key and openai.api_key != "your_openai_api_key":
-            with open(audio_file_path, "rb") as audio_file:
-                transcription = openai.Audio.transcribe(
-                    model="whisper-1",
-                    file=audio_file
-                )
-            return transcription.text
-        
-        # Fallback to local Whisper model
-        else:
-            # Load audio
-            result = whisper_model.transcribe(audio_file_path)
-            return result["text"]
+        # Open the audio file
+        with open(audio_file_path, "rb") as audio_file:
+            # Call OpenAI's Audio API with the updated client
+            transcription = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+            
+        # Return the transcribed text
+        return transcription.text
             
     except Exception as e:
         print(f"Error in transcription: {e}")
