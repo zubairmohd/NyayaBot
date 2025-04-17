@@ -1,12 +1,14 @@
 import os
 import requests
 import json
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationChain
-from langchain.llms.base import LLM
-from typing import Any, List, Mapping, Optional
-from langchain.callbacks.manager import CallbackManagerForLLMRun
 import time
+from typing import Any, List, Mapping, Optional
+
+# Updated LangChain imports
+from langchain_core.memory import ConversationBufferMemory
+from langchain.chains.conversation.base import ConversationChain
+from langchain_core.language_models.llms import LLM
+from langchain_core.callbacks import CallbackManagerForLLMRun
 from openai import OpenAI
 
 # Initialize API key from environment variable
