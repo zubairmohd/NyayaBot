@@ -19,4 +19,5 @@ dependencies = [
     "tts>=0.22.0",
     "whisper>=1.1.10",
     "faiss-cpu>=1.10.0",
+    "langchain-core>=0.3.52",
 ]
