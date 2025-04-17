@@ -106,18 +106,27 @@ export default function ChatInterface() {
       
       // Handle recording stop
       mediaRecorder.onstop = () => {
-        // Create blob from chunks
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        
-        // Create form data to send to server
-        const formData = new FormData();
-        formData.append('audio', audioBlob);
-        
         // Show loading state
         setIsLoading(true);
         
+        // For debugging audio uploads
+        console.log('Recording complete, sending audio data to server');
+        
+        // Create proper audio file from chunks
+        const fileData = new File([new Blob(audioChunksRef.current)], 'audio.wav', { 
+          type: 'audio/wav' 
+        });
+        
+        // Create form data to send to server
+        const formData = new FormData();
+        formData.append('audio', fileData);
+        
         // Send audio to server for transcription and response
-        axios.post('/api/transcribe', formData)
+        axios.post('/api/transcribe', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
           .then(response => {
             const transcription = response.data.transcription;
             setMessages(prev => [...prev, { role: 'user', content: transcription }]);

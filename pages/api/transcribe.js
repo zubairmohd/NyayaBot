@@ -1,4 +1,4 @@
-import formidable from 'formidable';
+import { IncomingForm } from 'formidable';
 import fs from 'fs';
 import path from 'path';
 import { transcribeAudio } from './llm-utils';
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   }
 
   // Parse form with uploaded file
-  const form = new formidable.IncomingForm({
+  const form = new IncomingForm({
     uploadDir: uploadsDir,
     keepExtensions: true,
   });
