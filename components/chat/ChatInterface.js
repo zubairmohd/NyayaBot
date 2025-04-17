@@ -91,12 +91,21 @@ export default function ChatInterface({ onMessageHistoryChange }) {
       // Get provider and model from selection
       const [provider, model] = selectedModel.split('/');
       
+      // Generate a session ID based on browser's session storage or create a new one
+      const sessionId = localStorage.getItem('nyayabot_session_id') || 
+        `session_${Math.random().toString(36).substring(2, 12)}`;
+      
+      // Store session ID for future use
+      localStorage.setItem('nyayabot_session_id', sessionId);
+      
       // Make a real API call to our backend
       const response = await axios.post('/api/chat', {
         message: input,
         language: selectedLanguage,
         provider,
-        model
+        model,
+        sessionId,
+        previousMessages: messages // Send existing conversation for context
       });
       
       if (response.data && response.data.message) {
@@ -105,6 +114,15 @@ export default function ChatInterface({ onMessageHistoryChange }) {
           content: response.data.message
         };
         setMessages(prev => [...prev, botResponse]);
+        
+        // If server returns the full conversation history, use it to ensure consistency
+        if (response.data.conversationHistory && response.data.conversationHistory.length > 0) {
+          // Only replace our message history if the server version has more messages
+          // This prevents losing context if the server has less history than the client
+          if (response.data.conversationHistory.length >= messages.length + 2) { // +2 for the new message pair
+            setMessages(response.data.conversationHistory);
+          }
+        }
       } else {
         throw new Error('Invalid response format from API');
       }
@@ -171,16 +189,34 @@ export default function ChatInterface({ onMessageHistoryChange }) {
             // Get provider and model from selection
             const [provider, model] = selectedModel.split('/');
             
-            // Then get AI response
+            // Generate a session ID based on browser's session storage or create a new one
+            const sessionId = localStorage.getItem('nyayabot_session_id') || 
+              `session_${Math.random().toString(36).substring(2, 12)}`;
+            
+            // Store session ID for future use
+            localStorage.setItem('nyayabot_session_id', sessionId);
+            
+            // Then get AI response with conversation context
             return axios.post('/api/chat', { 
               message: transcription,
               language: selectedLanguage,
               provider,
-              model
+              model,
+              sessionId,
+              previousMessages: messages // Send existing conversation for context
             });
           })
           .then(response => {
-            setMessages(prev => [...prev, { role: 'assistant', content: response.data.message }]);
+            const botResponse = { role: 'assistant', content: response.data.message };
+            setMessages(prev => [...prev, botResponse]);
+            
+            // If server returns the full conversation history, use it to ensure consistency
+            if (response.data.conversationHistory && response.data.conversationHistory.length > 0) {
+              // Only replace our message history if the server version has more messages
+              if (response.data.conversationHistory.length >= messages.length + 2) {
+                setMessages(response.data.conversationHistory);
+              }
+            }
           })
           .catch(error => {
             console.error('Error processing audio:', error);

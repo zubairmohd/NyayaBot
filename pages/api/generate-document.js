@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { generateLegalResponse } from './llm-utils';
 
-// PDF generation function using Node.js
+// Improved PDF generation function with proper legal document formatting
 async function generatePDF(content, docType) {
   try {
     // Import PDF libraries
@@ -16,93 +16,143 @@ async function generatePDF(content, docType) {
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
     
     // Get the standard font
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
     
     // Set margins
-    const margin = 50;
+    const margin = 72; // 1 inch margins
     const contentWidth = page.getWidth() - 2 * margin;
     
-    // Add header
-    page.drawText(docType.toUpperCase(), {
-      x: margin,
-      y: page.getHeight() - margin,
+    // Get document title based on type
+    let documentTitle = '';
+    switch(docType) {
+      case 'bail_application':
+        documentTitle = 'BAIL APPLICATION';
+        break;
+      case 'fir_complaint':
+        documentTitle = 'FIRST INFORMATION REPORT COMPLAINT';
+        break;
+      case 'legal_notice':
+        documentTitle = 'LEGAL NOTICE';
+        break;
+      case 'affidavit':
+        documentTitle = 'AFFIDAVIT';
+        break;
+      case 'pil_draft':
+        documentTitle = 'PUBLIC INTEREST LITIGATION';
+        break;
+      default:
+        documentTitle = docType.toUpperCase().replace(/_/g, ' ');
+    }
+    
+    // Add header centered
+    const titleWidth = boldFont.widthOfTextAtSize(documentTitle, 16);
+    const titleX = (page.getWidth() - titleWidth) / 2;
+    
+    page.drawText(documentTitle, {
+      x: titleX,
+      y: page.getHeight() - margin - 20,
       size: 16,
       font: boldFont,
-      color: rgb(0.2, 0.2, 0.5)
+      color: rgb(0, 0, 0)
     });
     
-    // Add date
-    page.drawText(`Generated on ${new Date().toLocaleDateString()}`, {
-      x: margin,
-      y: page.getHeight() - margin - 20,
-      size: 10,
-      font,
-      color: rgb(0.3, 0.3, 0.3)
-    });
+    // Process the content for better formatting
+    // Split the content into paragraphs
+    const paragraphs = content.split(/\n\n+/);
     
-    // Add divider line
-    page.drawLine({
-      start: { x: margin, y: page.getHeight() - margin - 30 },
-      end: { x: page.getWidth() - margin, y: page.getHeight() - margin - 30 },
-      thickness: 1,
-      color: rgb(0.7, 0.7, 0.7)
-    });
-    
-    // Prepare content for wrapping
-    const words = content.split(/\s+/);
-    let currentLine = '';
     let yPosition = page.getHeight() - margin - 60;
     const lineHeight = 14;
-    const fontSize = 11;
+    const paragraphSpacing = 10;
+    const fontSize = 12;
     
-    // Simple word wrapping logic
-    for (const word of words) {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      const lineWidth = font.widthOfTextAtSize(testLine, fontSize);
+    let currentPage = page;
+    
+    // Process each paragraph
+    for (const paragraph of paragraphs) {
+      // Check if this is a heading (all caps or starts with numbers)
+      const isHeading = /^[A-Z\s\d\.\(\)]+:?$/.test(paragraph.trim()) || 
+                       /^\d+\./.test(paragraph.trim()) ||
+                       /^[IVX]+\./.test(paragraph.trim());
       
-      if (lineWidth > contentWidth) {
-        // Draw current line and start a new one
-        page.drawText(currentLine, {
+      const currentFont = isHeading ? boldFont : font;
+      const currentSize = isHeading ? 13 : 12;
+      
+      // Add paragraph spacing
+      yPosition -= paragraphSpacing;
+      
+      // Check if we need a new page
+      if (yPosition < margin + 50) {
+        currentPage = pdfDoc.addPage([595.28, 841.89]);
+        yPosition = currentPage.getHeight() - margin;
+      }
+      
+      // Split paragraph into words for wrapping
+      const words = paragraph.split(/\s+/);
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        const lineWidth = currentFont.widthOfTextAtSize(testLine, currentSize);
+        
+        if (lineWidth > contentWidth) {
+          // Draw current line and start a new one
+          currentPage.drawText(currentLine, {
+            x: margin,
+            y: yPosition,
+            size: currentSize,
+            font: currentFont,
+            color: rgb(0, 0, 0)
+          });
+          
+          yPosition -= lineHeight;
+          currentLine = word;
+          
+          // Check if we need a new page
+          if (yPosition < margin + 30) {
+            currentPage = pdfDoc.addPage([595.28, 841.89]);
+            yPosition = currentPage.getHeight() - margin;
+          }
+        } else {
+          currentLine = testLine;
+        }
+      }
+      
+      // Draw the last line of the paragraph
+      if (currentLine) {
+        currentPage.drawText(currentLine, {
           x: margin,
           y: yPosition,
-          size: fontSize,
-          font,
+          size: currentSize,
+          font: currentFont,
           color: rgb(0, 0, 0)
         });
-        
         yPosition -= lineHeight;
-        currentLine = word;
-        
-        // Check if we need a new page
-        if (yPosition < margin) {
-          const newPage = pdfDoc.addPage([595.28, 841.89]);
-          yPosition = newPage.getHeight() - margin;
-        }
-      } else {
-        currentLine = testLine;
       }
     }
     
-    // Draw the last line
-    if (currentLine) {
-      page.drawText(currentLine, {
+    // Add footer to each page
+    for (let i = 0; i < pdfDoc.getPageCount(); i++) {
+      const p = pdfDoc.getPage(i);
+      p.drawText('This document is auto-generated by NyayaBot and requires legal review.', {
         x: margin,
-        y: yPosition,
-        size: fontSize,
+        y: margin - 20,
+        size: 8,
         font,
-        color: rgb(0, 0, 0)
+        color: rgb(0.5, 0.5, 0.5)
+      });
+      
+      // Add page numbers
+      const pageText = `Page ${i + 1} of ${pdfDoc.getPageCount()}`;
+      const pageWidth = font.widthOfTextAtSize(pageText, 10);
+      p.drawText(pageText, {
+        x: p.getWidth() - margin - pageWidth,
+        y: margin - 20,
+        size: 8,
+        font,
+        color: rgb(0.5, 0.5, 0.5)
       });
     }
-    
-    // Add footer
-    page.drawText('This document is auto-generated and may need review by a legal professional.', {
-      x: margin,
-      y: margin,
-      size: 8,
-      font,
-      color: rgb(0.5, 0.5, 0.5)
-    });
     
     // Serialize the PDF to bytes
     const pdfBytes = await pdfDoc.save();
