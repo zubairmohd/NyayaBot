@@ -5,7 +5,8 @@ Indian Legal and Law Informations according to India Penal Code
 
 NyayaBot is an AI-powered legal assistance platform tailored for Indian users, providing accessible, multilingual legal support across various communication channels.
 
-![NyayaBot Screenshot](https://i.ibb.co/c8hnXrG/nyayabot-screenshot.png)
+![NyayaBot Screenshot](https://github.com/Zubair2020/NyayaBot/blob/main/attached_assets/Screenshot.PNG)
+
 
 ## Features
 
