@@ -26,7 +26,7 @@ import axios from 'axios';
 import LanguageIcon from '@mui/icons-material/Language';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 
-export default function ChatInterface() {
+export default function ChatInterface({ onMessageHistoryChange }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +35,13 @@ export default function ChatInterface() {
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const messagesEndRef = useRef(null);
   const theme = useTheme();
+  
+  // Update parent component with message history when messages change
+  useEffect(() => {
+    if (onMessageHistoryChange && typeof onMessageHistoryChange === 'function') {
+      onMessageHistoryChange(messages);
+    }
+  }, [messages, onMessageHistoryChange]);
   
   // Available languages
   const languages = [

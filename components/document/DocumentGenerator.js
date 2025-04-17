@@ -52,32 +52,30 @@ export default function DocumentGenerator({ conversationHistory = [] }) {
     setError('');
     
     try {
-      // Mock document generation - replace with actual API call
-      setTimeout(() => {
-        // This would be the response from the server with the PDF data
-        const mockDocument = {
-          filename: `${docType}_document.pdf`,
-          // Mock base64 encoded PDF - in real app, this would be actual PDF data
-          data: 'JVBERi0xLjMKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwgL0xlbmd0aCA1IDAgUiAvRmlsdGVyIC9GbGF0ZURlY29kZSA+PgpzdHJlYW0KeAFLK89XyEjNycnXS8rPV0gsKsmLL1YISFXIzS9JVchIzEtRKE7MLchJBQCFiQvnCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago2NwplbmRvYmoKMiAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50'
-        };
-        
-        setGeneratedDocument(mockDocument);
-        setIsGenerating(false);
-        setShowSuccess(true);
-      }, 2000);
-      
-      // Actual API call would look like:
-      /*
-      const response = await axios.post('/api/generate-document', {
-        docType,
-        conversationHistory
+      // Make actual API call to generate document
+      const response = await fetch('/api/generate-document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          docType,
+          conversationHistory
+        }),
       });
       
-      setGeneratedDocument(response.data);
-      */
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate document');
+      }
+      
+      const data = await response.json();
+      setGeneratedDocument(data);
+      setIsGenerating(false);
+      setShowSuccess(true);
     } catch (error) {
       console.error('Error generating document:', error);
-      setError('Failed to generate document. Please try again later.');
+      setError(`Failed to generate document: ${error.message}`);
       setIsGenerating(false);
     }
   };
