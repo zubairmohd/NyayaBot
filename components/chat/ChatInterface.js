@@ -33,8 +33,21 @@ export default function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedModel, setSelectedModel] = useState('openai/gpt-4o');
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
   const messagesEndRef = useRef(null);
   const theme = useTheme();
+  
+  // Available languages
+  const languages = [
+    { code: 'en', name: 'English' },
+    { code: 'hi', name: 'हिंदी (Hindi)' },
+    { code: 'bn', name: 'বাংলা (Bengali)' },
+    { code: 'te', name: 'తెలుగు (Telugu)' },
+    { code: 'ta', name: 'தமிழ் (Tamil)' },
+    { code: 'kn', name: 'ಕನ್ನಡ (Kannada)' },
+    { code: 'mr', name: 'मराठी (Marathi)' },
+    { code: 'gu', name: 'ગુજરાતી (Gujarati)' },
+  ];
   
   // Mock audio recording functionality (to be replaced with actual implementation)
   const mediaRecorderRef = useRef(null);
@@ -64,7 +77,7 @@ export default function ChatInterface() {
       // Make a real API call to our backend
       const response = await axios.post('/api/chat', {
         message: input,
-        language: 'en', // This will be dynamic based on selected language
+        language: selectedLanguage, // Now using the selected language
         provider,
         model
       });
@@ -147,7 +160,7 @@ export default function ChatInterface() {
             // Then get AI response
             return axios.post('/api/chat', { 
               message: transcription,
-              language: 'en', // This will be dynamic based on selected language
+              language: selectedLanguage, // Now using the selected language
               provider,
               model
             });
@@ -195,8 +208,20 @@ export default function ChatInterface() {
       // Create a new utterance
       const utterance = new SpeechSynthesisUtterance(message.content);
       
-      // Set language - in a full implementation this would be dynamic
-      utterance.lang = 'en-IN'; // Indian English
+      // Map language code to a suitable speech synthesis language code
+      const langMap = {
+        'en': 'en-IN', // Indian English
+        'hi': 'hi-IN', // Hindi (India)
+        'bn': 'bn-IN', // Bengali (India)
+        'te': 'te-IN', // Telugu (India)
+        'ta': 'ta-IN', // Tamil (India)
+        'kn': 'kn-IN', // Kannada (India)
+        'mr': 'mr-IN', // Marathi (India)
+        'gu': 'gu-IN', // Gujarati (India)
+      };
+      
+      // Set language based on selected language (with fallback to English)
+      utterance.lang = langMap[selectedLanguage] || 'en-IN';
       
       // Optional: Configure voice properties
       utterance.rate = 0.9; // Slightly slower
@@ -223,29 +248,67 @@ export default function ChatInterface() {
           color: 'white'
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="h6">NyayaBot Chat</Typography>
-          <FormControl sx={{ minWidth: 180, backgroundColor: 'white', borderRadius: 1 }} size="small">
-            <InputLabel id="model-select-label">AI Model</InputLabel>
-            <Select
-              labelId="model-select-label"
-              id="model-select"
-              value={selectedModel}
-              label="AI Model"
-              onChange={(e) => setSelectedModel(e.target.value)}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+          <Box>
+            <Typography variant="h6">NyayaBot Chat</Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              Ask me any legal question related to Indian law
+            </Typography>
+          </Box>
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: '200px' }}>
+            {/* AI Model Selector */}
+            <FormControl 
+              sx={{ 
+                width: '100%', 
+                backgroundColor: 'white', 
+                borderRadius: 1 
+              }} 
+              size="small"
             >
-              <MenuItem value="openai/gpt-4o">OpenAI GPT-4o</MenuItem>
-              <MenuItem value="openai/gpt-3.5-turbo">OpenAI GPT-3.5</MenuItem>
-              <MenuItem value="qwen/qwen2.5-7b">Qwen 2.5 (7B)</MenuItem>
-              <MenuItem value="qwen/qwen2.5-32b">Qwen 2.5 (32B)</MenuItem>
-              <MenuItem value="huggingface/llama-3-8b">Llama 3 (8B)</MenuItem>
-              <MenuItem value="huggingface/llama-3-70b">Llama 3 (70B)</MenuItem>
-            </Select>
-          </FormControl>
+              <InputLabel id="model-select-label">AI Model</InputLabel>
+              <Select
+                labelId="model-select-label"
+                id="model-select"
+                value={selectedModel}
+                label="AI Model"
+                onChange={(e) => setSelectedModel(e.target.value)}
+              >
+                <MenuItem value="openai/gpt-4o">OpenAI GPT-4o</MenuItem>
+                <MenuItem value="openai/gpt-3.5-turbo">OpenAI GPT-3.5</MenuItem>
+                <MenuItem value="qwen/qwen2.5-7b">Qwen 2.5 (7B)</MenuItem>
+                <MenuItem value="qwen/qwen2.5-32b">Qwen 2.5 (32B)</MenuItem>
+                <MenuItem value="huggingface/llama-3-8b">Llama 3 (8B)</MenuItem>
+                <MenuItem value="huggingface/llama-3-70b">Llama 3 (70B)</MenuItem>
+              </Select>
+            </FormControl>
+            
+            {/* Language Selector */}
+            <FormControl 
+              sx={{ 
+                width: '100%', 
+                backgroundColor: 'white', 
+                borderRadius: 1 
+              }} 
+              size="small"
+            >
+              <InputLabel id="language-select-label">Language</InputLabel>
+              <Select
+                labelId="language-select-label"
+                id="language-select"
+                value={selectedLanguage}
+                label="Language"
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+              >
+                {languages.map((lang) => (
+                  <MenuItem key={lang.code} value={lang.code}>
+                    {lang.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
-        <Typography variant="body2">
-          Ask me any legal question related to Indian law
-        </Typography>
       </Paper>
       
       {/* Messages container */}
