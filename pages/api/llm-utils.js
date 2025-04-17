@@ -213,19 +213,65 @@ class LLMService {
 // This function generates a response from the selected LLM based on the user's query
 export async function generateLegalResponse(query, languageCode = 'en', provider = 'openai', model = 'gpt-4o') {
   try {
-    // Read some context from our legal document
-    const legalContextPath = path.join(process.cwd(), 'attached_assets/Indian Penal Code Book (2).pdf');
-    // We would extract text from PDF here in a real implementation
-    // For now, we'll use a simple context 
-    const legalContext = `
-    The Indian Penal Code (IPC) is the official criminal code of India that covers all substantive aspects of criminal law. 
-    It was drafted in 1860 and came into force in 1862.
-    Section 299 and 300 deal with culpable homicide and murder.
-    Section 375 covers sexual assault.
-    Section 378 covers theft.
-    Section 415 covers fraud and cheating.
-    It applies to the whole of India, except Jammu and Kashmir.
-    `;
+    // Use our Python RAG system to retrieve relevant context for the query
+    let relevantContext = "";
+    
+    try {
+      // Dynamically import the child_process module to spawn a Python process
+      const { spawn } = require('child_process');
+      
+      // Execute the Python script to retrieve context from our RAG system
+      const pythonProcess = spawn('python', [
+        path.join(process.cwd(), 'utils/retrieve_context.py'),
+        query
+      ]);
+      
+      // Collect the output from the Python script
+      let contextData = '';
+      pythonProcess.stdout.on('data', (data) => {
+        contextData += data.toString();
+      });
+      
+      // Wait for the process to complete
+      await new Promise((resolve, reject) => {
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            console.warn(`Python process exited with code ${code}`);
+            resolve(); // Continue even if there's an error
+          }
+        });
+      });
+      
+      // Use the retrieved context if available
+      if (contextData.trim()) {
+        relevantContext = contextData.trim();
+      } else {
+        // Fallback to a basic context if RAG retrieval failed
+        relevantContext = `
+        The Indian Penal Code (IPC) is the official criminal code of India that covers all substantive aspects of criminal law. 
+        It was drafted in 1860 and came into force in 1862.
+        Section 299 and 300 deal with culpable homicide and murder.
+        Section 375 covers sexual assault.
+        Section 378 covers theft.
+        Section 415 covers fraud and cheating.
+        It applies to the whole of India, except Jammu and Kashmir.
+        `;
+      }
+    } catch (err) {
+      console.warn('Failed to retrieve context from RAG system:', err);
+      // Fallback to a basic context if RAG retrieval failed
+      relevantContext = `
+      The Indian Penal Code (IPC) is the official criminal code of India that covers all substantive aspects of criminal law. 
+      It was drafted in 1860 and came into force in 1862.
+      Section 299 and 300 deal with culpable homicide and murder.
+      Section 375 covers sexual assault.
+      Section 378 covers theft.
+      Section 415 covers fraud and cheating.
+      It applies to the whole of India, except Jammu and Kashmir.
+      `;
+    }
 
     // Construct the prompt with legal context for better responses
     const prompt = `
@@ -234,7 +280,7 @@ export async function generateLegalResponse(query, languageCode = 'en', provider
     but clearly indicate when you're going beyond the provided information.
     
     Context:
-    ${legalContext}
+    ${relevantContext}
     
     Query: ${query}
     

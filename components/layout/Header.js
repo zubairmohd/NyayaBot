@@ -95,6 +95,11 @@ export default function Header({ currentLanguage, setLanguage }) {
                 </Link>
               </MenuItem>
               <MenuItem onClick={handleMobileMenuClose}>
+                <Link href="/upload" passHref>
+                  <Typography>Upload Documents</Typography>
+                </Link>
+              </MenuItem>
+              <MenuItem onClick={handleMobileMenuClose}>
                 <Link href="/about" passHref>
                   <Typography>About</Typography>
                 </Link>
@@ -109,6 +114,11 @@ export default function Header({ currentLanguage, setLanguage }) {
         ) : (
           <>
             <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button color="inherit">
+                <Link href="/upload" passHref>
+                  <Typography sx={{ color: theme.palette.text.secondary }}>Upload Documents</Typography>
+                </Link>
+              </Button>
               <Button color="inherit">
                 <Link href="/about" passHref>
                   <Typography sx={{ color: theme.palette.text.secondary }}>About</Typography>
