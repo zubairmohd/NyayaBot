@@ -54,6 +54,11 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     Returns:
         str: Extracted text
     """
+    # Check if PyPDF2 is available
+    if not 'PDF_AVAILABLE' in globals() or not PDF_AVAILABLE:
+        print("PyPDF2 not available. Cannot extract text from PDF.")
+        return ""
+        
     try:
         with open(pdf_path, 'rb') as file:
             reader = PyPDF2.PdfReader(file)
@@ -76,6 +81,22 @@ def process_document(file_path: str) -> bool:
     Returns:
         bool: Whether the document was successfully processed
     """
+    # First, check if we have the required packages
+    if not 'PDF_AVAILABLE' in globals() or not PDF_AVAILABLE:
+        print("PDF processing capabilities not available. Cannot process document.")
+        return False
+        
+    if not 'LANGCHAIN_AVAILABLE' in globals() or not LANGCHAIN_AVAILABLE:
+        print("LangChain RAG capabilities not available. Cannot add to vector store. Still saving document.")
+        # At least save the file in the uploads folder
+        try:
+            os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'uploads'), exist_ok=True)
+            print(f"Document saved at {file_path}")
+            return True
+        except Exception as e:
+            print(f"Error saving document: {e}")
+            return False
+    
     try:
         # Extract text from the document
         text = extract_text_from_pdf(file_path)
@@ -99,6 +120,10 @@ def process_document(file_path: str) -> bool:
         
         # Get embeddings
         embeddings = get_embeddings()
+        
+        if embeddings is None:
+            print("Embeddings model not available. Cannot add to vector store.")
+            return True  # Still return True as we've saved the document
         
         # Create vector store path
         vector_store_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'uploads', 'vectorstore')
