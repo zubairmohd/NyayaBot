@@ -6,7 +6,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { message, language = 'en' } = req.body;
+  const { 
+    message, 
+    language = 'en',
+    provider = 'openai',
+    model = 'gpt-4o'
+  } = req.body;
 
   if (!message) {
     res.status(400).json({ error: 'Message is required' });
@@ -14,8 +19,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Use our OpenAI-based implementation directly
-    const legalResponse = await generateLegalResponse(message, language);
+    // Use our implementation with specified model and provider
+    const legalResponse = await generateLegalResponse(message, language, provider, model);
     
     res.status(200).json({ message: legalResponse });
   } catch (error) {

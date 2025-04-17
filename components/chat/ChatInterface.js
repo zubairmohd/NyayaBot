@@ -11,6 +11,10 @@ import {
   useTheme,
   Card,
   Avatar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import MicIcon from '@mui/icons-material/Mic';
@@ -28,6 +32,7 @@ export default function ChatInterface() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-4o');
   const messagesEndRef = useRef(null);
   const theme = useTheme();
   
@@ -53,10 +58,15 @@ export default function ChatInterface() {
     setIsLoading(true);
     
     try {
+      // Get provider and model from selection
+      const [provider, model] = selectedModel.split('/');
+      
       // Make a real API call to our backend
       const response = await axios.post('/api/chat', {
         message: input,
-        language: 'en' // This will be dynamic based on selected language
+        language: 'en', // This will be dynamic based on selected language
+        provider,
+        model
       });
       
       if (response.data && response.data.message) {
@@ -131,10 +141,15 @@ export default function ChatInterface() {
             const transcription = response.data.transcription;
             setMessages(prev => [...prev, { role: 'user', content: transcription }]);
             
+            // Get provider and model from selection
+            const [provider, model] = selectedModel.split('/');
+            
             // Then get AI response
             return axios.post('/api/chat', { 
               message: transcription,
-              language: 'en' // This will be dynamic based on selected language
+              language: 'en', // This will be dynamic based on selected language
+              provider,
+              model
             });
           })
           .then(response => {
@@ -208,7 +223,26 @@ export default function ChatInterface() {
           color: 'white'
         }}
       >
-        <Typography variant="h6">NyayaBot Chat</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">NyayaBot Chat</Typography>
+          <FormControl sx={{ minWidth: 180, backgroundColor: 'white', borderRadius: 1 }} size="small">
+            <InputLabel id="model-select-label">AI Model</InputLabel>
+            <Select
+              labelId="model-select-label"
+              id="model-select"
+              value={selectedModel}
+              label="AI Model"
+              onChange={(e) => setSelectedModel(e.target.value)}
+            >
+              <MenuItem value="openai/gpt-4o">OpenAI GPT-4o</MenuItem>
+              <MenuItem value="openai/gpt-3.5-turbo">OpenAI GPT-3.5</MenuItem>
+              <MenuItem value="qwen/qwen2.5-7b">Qwen 2.5 (7B)</MenuItem>
+              <MenuItem value="qwen/qwen2.5-32b">Qwen 2.5 (32B)</MenuItem>
+              <MenuItem value="huggingface/llama-3-8b">Llama 3 (8B)</MenuItem>
+              <MenuItem value="huggingface/llama-3-70b">Llama 3 (70B)</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
         <Typography variant="body2">
           Ask me any legal question related to Indian law
         </Typography>
