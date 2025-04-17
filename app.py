@@ -24,7 +24,7 @@ init_db()
 
 # Get or create user in database
 def get_or_create_user(session_id, preferred_language="en"):
-    db = next(get_db())
+    db = get_db()
     user = db.query(User).filter(User.session_id == session_id).first()
     
     if not user:
@@ -168,7 +168,7 @@ if st.button("🎙️ Click to Record (10 seconds)"):
                     st.session_state.conversation_history.append({"role": "user", "content": transcribed_text, "language": detected_lang})
                     
                     # Save user message to database
-                    db = next(get_db())
+                    db = get_db()
                     user_message = Message(
                         conversation_id=st.session_state.conversation_id,
                         role="user",
@@ -245,7 +245,7 @@ if audio_file is not None:
             st.session_state.conversation_history.append({"role": "user", "content": transcribed_text, "language": detected_lang})
             
             # Save user message to database
-            db = next(get_db())
+            db = get_db()
             user_message = Message(
                 conversation_id=st.session_state.conversation_id,
                 role="user",
@@ -311,7 +311,7 @@ if st.button("Submit Query") and text_query:
         st.session_state.conversation_history.append({"role": "user", "content": text_query, "language": detected_lang})
         
         # Save user message to database
-        db = next(get_db())
+        db = get_db()
         user_message = Message(
             conversation_id=st.session_state.conversation_id,
             role="user",
@@ -448,7 +448,7 @@ if st.button("Clear Conversation"):
     st.session_state.memory = initialize_memory()
     
     # Create a new conversation in the database
-    db = next(get_db())
+    db = get_db()
     conversation = Conversation(user_id=st.session_state.user_id)
     db.add(conversation)
     db.commit()
