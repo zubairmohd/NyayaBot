@@ -107,12 +107,13 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     render_svg()
     st.title("NyayaBot - आपका AI वकील")
-    st.markdown("##### Instant Legal Advice in Your Language")
+    st.markdown("##### Instant Legal Advice in Your Language / आपकी भाषा में तत्काल कानूनी सलाह")
+    st.write("🇮🇳 Made for India, with love. / भारत के लिए, प्यार के साथ बनाया गया।")
 
 # Language selection
 languages = list(supported_languages.keys())
 selected_language = st.selectbox(
-    "Choose your preferred language:",
+    "Choose your preferred language / अपनी पसंदीदा भाषा चुनें:",
     languages,
     index=languages.index(st.session_state.language)
 )
@@ -138,92 +139,10 @@ with st.expander("📝 Important Disclaimer", expanded=False):
 st.markdown("### How can I help you with your legal query today?")
 
 # Voice input section
-st.markdown("#### 🎤 Speak Your Query")
+st.markdown("#### 🎤 Upload Audio for Your Query")
 
-# Record audio button
-audio_file = st.file_uploader("Or upload an audio file", type=['wav', 'mp3', 'ogg'], label_visibility="collapsed")
-            
-if st.button("🎙️ Click to Record (10 seconds)"):
-    with st.spinner("Recording your voice..."):
-        # Using streamlit's audio recorder and displaying a countdown
-        audio_bytes = st.audio_recorder(pause_threshold=10.0, sample_rate=16000)
-        if audio_bytes:
-            st.audio(audio_bytes, format="audio/wav")
-            
-            # Process the audio
-            with st.spinner("Processing your audio..."):
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
-                    tmp_file.write(audio_bytes)
-                    tmp_file_path = tmp_file.name
-                
-                # Transcribe the audio using Whisper API
-                transcribed_text = transcribe_audio(tmp_file_path)
-                
-                # Clean up temp file
-                os.unlink(tmp_file_path)
-                
-                if transcribed_text:
-                    # Detect language if not obvious
-                    detected_lang = detect_language(transcribed_text)
-                    st.session_state.conversation_history.append({"role": "user", "content": transcribed_text, "language": detected_lang})
-                    
-                    # Save user message to database
-                    db = get_db()
-                    user_message = Message(
-                        conversation_id=st.session_state.conversation_id,
-                        role="user",
-                        content=transcribed_text,
-                        language=detected_lang
-                    )
-                    db.add(user_message)
-                    db.commit()
-                    
-                    # Get AI response
-                    response = get_legal_response(transcribed_text, st.session_state.memory, detected_lang)
-                    
-                    # Translate response if needed (based on detected input language)
-                    if detected_lang != "en" and detected_lang in supported_languages.values():
-                        translated_response = translate_text(response, detected_lang)
-                        st.session_state.conversation_history.append({
-                            "role": "assistant", 
-                            "content": translated_response, 
-                            "original": response, 
-                            "language": detected_lang
-                        })
-                        
-                        # Save assistant response to database
-                        assistant_message = Message(
-                            conversation_id=st.session_state.conversation_id,
-                            role="assistant",
-                            content=translated_response,
-                            original_content=response,
-                            language=detected_lang
-                        )
-                    else:
-                        st.session_state.conversation_history.append({
-                            "role": "assistant", 
-                            "content": response, 
-                            "language": "en"
-                        })
-                        
-                        # Save assistant response to database
-                        assistant_message = Message(
-                            conversation_id=st.session_state.conversation_id,
-                            role="assistant",
-                            content=response,
-                            language="en"
-                        )
-                        
-                    db.add(assistant_message)
-                    db.commit()
-                    
-                    # Generate audio response
-                    audio_response = text_to_speech(
-                        st.session_state.conversation_history[-1]["content"], 
-                        detected_lang if detected_lang != "en" else "en"
-                    )
-                    
-                    st.rerun()
+# Audio file uploader
+audio_file = st.file_uploader("Upload an audio file (WAV, MP3, or OGG format)", type=['wav', 'mp3', 'ogg'])
 
 if audio_file is not None:
     # Process uploaded audio file
@@ -303,8 +222,8 @@ if audio_file is not None:
             st.rerun()
 
 # Text input as alternative
-text_query = st.text_input("Or type your query here:")
-if st.button("Submit Query") and text_query:
+text_query = st.text_input("Type your query here (हिंदी में पूछने के लिए सीधे हिंदी में टाइप करें):")
+if st.button("Submit Query / प्रश्न भेजें 🚀") and text_query:
     with st.spinner("Processing your query..."):
         # Detect language
         detected_lang = detect_language(text_query)
@@ -408,14 +327,20 @@ else:
                     st.audio(st.session_state[audio_file_key], format="audio/mp3")
 
 # Document Generation Section
-st.markdown("### 📄 Generate Legal Documents")
+st.markdown("### 📄 Generate Legal Documents / क़ानूनी दस्तावेज़ बनाएँ")
 
 doc_type = st.selectbox(
-    "Select document type to generate:",
-    ["Bail Application", "FIR Complaint", "Legal Notice", "Affidavit", "PIL Draft"]
+    "Select document type to generate / दस्तावेज़ का प्रकार चुनें:",
+    [
+        "Bail Application / जमानत अर्जी", 
+        "FIR Complaint / प्राथमिकी शिकायत", 
+        "Legal Notice / कानूनी नोटिस", 
+        "Affidavit / शपथ पत्र", 
+        "PIL Draft / जनहित याचिका"
+    ]
 )
 
-if st.button("Generate Document"):
+if st.button("Generate Document / दस्तावेज़ बनाएँ 📝"):
     # Check if there's conversation history to use
     if not st.session_state.conversation_history:
         st.error("Please have a conversation first so I understand your legal needs.")
@@ -425,8 +350,11 @@ if st.button("Generate Document"):
             conversation_text = "\n".join([f"{msg['role']}: {msg['content']}" 
                                           for msg in st.session_state.conversation_history])
             
+            # Extract just the English part of the document type (before the slash)
+            english_doc_type = doc_type.split('/')[0].strip()
+            
             # Generate the document and save to database
-            doc_content = generate_document(doc_type, conversation_text, st.session_state.user_id)
+            doc_content = generate_document(english_doc_type, conversation_text, st.session_state.user_id)
             
             # No need to encode as generate_document now returns bytes
             pdf_bytes = BytesIO(doc_content)
@@ -434,16 +362,17 @@ if st.button("Generate Document"):
             
             # Offer download
             st.download_button(
-                label=f"Download {doc_type}",
+                label=f"Download {english_doc_type}",
                 data=pdf_bytes,
-                file_name=f"{doc_type.lower().replace(' ', '_')}_{st.session_state.session_id}.pdf",
+                file_name=f"{english_doc_type.lower().replace(' ', '_')}_{st.session_state.session_id}.pdf",
                 mime="application/pdf"
             )
             
-            st.success(f"Your {doc_type} has been generated successfully!")
+            # Bilingual success message
+            st.success(f"Your {english_doc_type} has been generated successfully! / आपका {doc_type.split('/')[1].strip()} सफलतापूर्वक बनाया गया है!")
 
 # Clear conversation button
-if st.button("Clear Conversation"):
+if st.button("Clear Conversation / बातचीत साफ़ करें 🔄"):
     st.session_state.conversation_history = []
     st.session_state.memory = initialize_memory()
     
