@@ -1,5 +1,5 @@
 # NyayaBot
-Indian Legal and Law Informations according to India Penal Code
+Indian Legal and Law Informations according to Indian Penal Code
 =======
 # NyayaBot - Your AI Legal Assistant
 
